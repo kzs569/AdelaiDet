@@ -1,7 +1,7 @@
 _BASE_: "Base-FCOS.yaml"
 MODEL:
   FCOS:
-    LOC_LOSS_TYPE: "ciou"
+    LOC_LOSS_TYPE: "giou"
   WEIGHTS: "detectron2://ImageNetPretrained/MSRA/R-50.pkl"
   RESNETS:
     DEPTH: 50

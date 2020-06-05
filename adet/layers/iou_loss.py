@@ -34,10 +34,10 @@ class IOULoss(nn.Module):
         target_right = target[:, 2]
         target_bottom = target[:, 3]
         
-        target_aera = (-target_left + target_right) * \
-                      (-target_top + target_bottom)
-        pred_aera = (-pred_left + pred_right) * \
-                    (-pred_top + pred_bottom)
+        target_aera = (target_left + target_right) * \
+                      (target_top + target_bottom)
+        pred_aera = (pred_left + pred_right) * \
+                    (pred_top + pred_bottom)
         
         w_intersect = torch.min(pred_left, target_left) + \
                       torch.min(pred_right, target_right)
@@ -56,39 +56,13 @@ class IOULoss(nn.Module):
         ious = (area_intersect + 1.0) / (area_union + 1.0)
         gious = ious - (ac_uion - area_union) / ac_uion
         
-        # cIoU 计算两个中心点之间的距离
-        center_x1 = 0.5 * (pred_left + pred_right)
-        center_x2 = 0.5 * (target_left + target_right)
-        
-        center_y1 = 0.5 * (pred_top + pred_right)
-        center_y2 = 0.5 * (target_top + target_right)
-        inter_diag = (center_x2 - center_x1) ** 2 + (center_y2 - center_y1) ** 2
-        c_diag = torch.clamp((torch.max(pred_right, target_right) - torch.min(pred_left, target_left)),
-                             min=0) ** 2 \
-                 + torch.clamp(
-            (torch.max(pred_bottom, target_bottom) - torch.min(pred_top, target_top)), min=0) ** 2
-        u = (inter_diag) / c_diag
-        
-        # cIoU 计算两个bboxing的宽高比
-        v = (4 / (math.pi ** 2)) * torch.pow((torch.atan(
-            (target_right - target_left) / (target_bottom - target_top)) - torch.atan(
-            (pred_right - pred_left) / (pred_bottom - pred_top))), 2)
-        
-        with torch.no_grad():
-            S = (ious > 0.5).float()
-            alpha = S * v / (1 - ious + v)
-        
-        cious = ious - u - alpha * v
-        cious = torch.clamp(cious, min=-1.0, max=1.0)
-        
+
         if self.loc_loss_type == 'iou':
             losses = -torch.log(ious)
         elif self.loc_loss_type == 'linear_iou':
             losses = 1 - ious
         elif self.loc_loss_type == 'giou':
             losses = 1 - gious
-        elif self.loc_loss_type == 'ciou':
-            losses = 1 - cious
         else:
             raise NotImplementedError
         
