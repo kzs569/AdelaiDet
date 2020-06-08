@@ -456,7 +456,7 @@ class FCOS_CIOU_Outputs(nn.Module):
                 reg_targets.append(locations.new_zeros((locations.size(0), 4)))
                 target_inds.append(labels_per_im.new_zeros(locations.size(0)) - 1)
                 
-                mask_centers.append(labels_per_im.new_zeros((locations.size(0), 2)))
+                mask_centers.append(locations.new_zeros((locations.size(0), 2)))
                 continue
             # [N * 1]
             area = targets_per_im.gt_boxes.area()
@@ -504,7 +504,7 @@ class FCOS_CIOU_Outputs(nn.Module):
             target_inds_per_im = locations_to_gt_inds + num_targets
             num_targets += len(targets_per_im)
             
-            mask_centers_per_im = mask_centers[locations_to_gt_inds]
+            mask_centers_per_im = gt_mask_centers[locations_to_gt_inds]
             
             # 如果面积为INF，即存在上文所说的center不在bbox中的情况和找不到合适的feature map level，即设为背景
             labels_per_im = labels_per_im[locations_to_gt_inds]
