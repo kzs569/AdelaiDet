@@ -555,8 +555,8 @@ class FCOS_CIOU_Outputs(nn.Module):
         # 这里直接改为预测中心点坐标
         ctrness_pred = cat(
             [
-                # Reshape: (N, 1, Hi, Wi) -> (N*Hi*Wi, 2)
-                x.permute(0, 2, 3, 1).reshape(-1) for x in ctrness_pred
+                # Reshape: (N, 2, Hi, Wi) -> (N*Hi*Wi, 2)
+                x.permute(0, 2, 3, 1).reshape(-1, 2) for x in ctrness_pred
             ], dim=0, )
         
         labels = cat(
