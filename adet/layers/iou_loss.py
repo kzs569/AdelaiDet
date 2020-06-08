@@ -56,7 +56,6 @@ class IOULoss(nn.Module):
         ious = (area_intersect + 1.0) / (area_union + 1.0)
         gious = ious - (ac_uion - area_union) / ac_uion
         
-
         if self.loc_loss_type == 'iou':
             losses = -torch.log(ious)
         elif self.loc_loss_type == 'linear_iou':
@@ -72,9 +71,9 @@ class IOULoss(nn.Module):
             return losses.sum()
 
 
-class CenternessIOULoss(nn.Module):
-    def __init__(self, loc_loss_type='centerness_iou'):
-        super(CenternessIOULoss, self).__init__()
+class CenterIOULoss(nn.Module):
+    def __init__(self, loc_loss_type='center_iou'):
+        super(CenterIOULoss, self).__init__()
         self.loc_loss_type = loc_loss_type
     
     def forward(self, reg_pred, reg_target, ctrness_pred, ctrness_targets, weight=None):
@@ -121,19 +120,20 @@ class CenternessIOULoss(nn.Module):
         inter_diag = (center_x1 - center_x2) ** 2 + (
                 center_y1 - center_y2) ** 2
         
-        c_diag = torch.clamp((torch.max(pred_right, target_right) - torch.min(pred_left, target_left)),
-                             min=0) ** 2 \
-                 + torch.clamp(
-            (torch.max(pred_bottom, target_bottom) - torch.min(pred_top, target_top)), min=0) ** 2
+        min_left_pred_target = torch.clamp(torch.min(center_x1 - pred_left, center_x2 - target_left), min=0)
+        min_top_pred_target = torch.clamp(torch.min(center_y1 - pred_top, center_y2 - target_top), min=0)
+        
+        max_right_pred_target = torch.max(center_x1 + pred_right, center_x2 + target_right)
+        max_bottom_pred_target = torch.max(center_y1 + pred_bottom, center_y2 + target_bottom)
+        
+        c_diag = torch.sqrt((min_left_pred_target - max_right_pred_target) ** 2
+                            + (min_top_pred_target - max_bottom_pred_target) ** 2)
         u = (inter_diag) / c_diag
         
         # cIoU 计算两个bboxing的宽高比
         v = (4 / (math.pi ** 2)) * torch.pow((torch.atan(
-            (target_right - center_x2) / (target_bottom - center_y2)) - torch.atan(
-            (pred_right - center_x1) / (pred_bottom - center_y1))), 2) \
-            + (4 / (math.pi ** 2)) * torch.pow((torch.atan(
-            (target_right - center_x2) / (target_bottom - center_y2)) - torch.atan(
-            (pred_right - center_x1) / (pred_bottom - center_y1))), 2)
+            (target_right + target_left) / (target_bottom + target_top)) - torch.atan(
+            (pred_right + pred_left) / (pred_bottom + target_top))), 2)
         
         with torch.no_grad():
             S = (ious > 0.5).float()

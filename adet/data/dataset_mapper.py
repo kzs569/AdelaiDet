@@ -124,6 +124,7 @@ class DatasetMapperWithBasis(DatasetMapper):
                     anno.pop("keypoints", None)
 
             # USER: Implement additional transformations if you have other types of data
+            # change apply here
             annos = [
                 transform_instance_annotations(
                     obj, transforms, image_shape, keypoint_hflip_indices=self.keypoint_hflip_indices

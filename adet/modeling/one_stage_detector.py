@@ -15,7 +15,7 @@ def detector_postprocess(results, output_height, output_width, mask_threshold=0.
     """
     scale_x, scale_y = (output_width / results.image_size[1], output_height / results.image_size[0])
     results = d2_postprocesss(results, output_height, output_width, mask_threshold)
-
+    
     # scale bezier points
     if results.has("beziers"):
         beziers = results.beziers
@@ -31,7 +31,7 @@ def detector_postprocess(results, output_height, output_width, mask_threshold=0.
         beziers[:, 9].clamp_(min=0, max=h)
         beziers[:, 14].clamp_(min=0, max=w)
         beziers[:, 15].clamp_(min=0, max=h)
-
+    
     return results
 
 
@@ -41,6 +41,7 @@ class OneStageDetector(ProposalNetwork):
     Same as :class:`detectron2.modeling.ProposalNetwork`.
     Uses "instances" as the return key instead of using "proposal".
     """
+    
     def forward(self, batched_inputs):
         if self.training:
             return super().forward(batched_inputs)
@@ -68,11 +69,12 @@ class OneStageRCNN(GeneralizedRCNN):
     Same as :class:`detectron2.modeling.ProposalNetwork`.
     Use one stage detector and a second stage for instance-wise prediction.
     """
+    
     def __init__(self, cfg):
         super().__init__(cfg)
         self.top_module = build_top_module(cfg)
         self.to(self.device)
-
+    
     def forward(self, batched_inputs):
         """
         Args:
@@ -98,7 +100,7 @@ class OneStageRCNN(GeneralizedRCNN):
         """
         if not self.training:
             return self.inference(batched_inputs)
-
+        
         images = self.preprocess_image(batched_inputs)
         if "instances" in batched_inputs[0]:
             gt_instances = [x["instances"].to(self.device) for x in batched_inputs]
@@ -109,28 +111,28 @@ class OneStageRCNN(GeneralizedRCNN):
             gt_instances = [x["targets"].to(self.device) for x in batched_inputs]
         else:
             gt_instances = None
-
+        
         features = self.backbone(images.tensor)
-
+        
         if self.proposal_generator:
-            proposals, proposal_losses = self.proposal_generator( 
+            proposals, proposal_losses = self.proposal_generator(
                 images, features, gt_instances, self.top_module)
         else:
             assert "proposals" in batched_inputs[0]
             proposals = [x["proposals"].to(self.device) for x in batched_inputs]
             proposal_losses = {}
-
+        
         _, detector_losses = self.roi_heads(images, features, proposals, gt_instances)
         if self.vis_period > 0:
             storage = get_event_storage()
             if storage.iter % self.vis_period == 0:
                 self.visualize_training(batched_inputs, proposals)
-
+        
         losses = {}
         losses.update(detector_losses)
         losses.update(proposal_losses)
         return losses
-
+    
     def inference(self, batched_inputs, detected_instances=None, do_postprocess=True):
         """
         Run inference on the given inputs.
@@ -149,10 +151,10 @@ class OneStageRCNN(GeneralizedRCNN):
             same as in :meth:`forward`.
         """
         assert not self.training
-
+        
         images = self.preprocess_image(batched_inputs)
         features = self.backbone(images.tensor)
-
+        
         if detected_instances is None:
             if self.proposal_generator:
                 proposals, _ = self.proposal_generator(
@@ -160,17 +162,17 @@ class OneStageRCNN(GeneralizedRCNN):
             else:
                 assert "proposals" in batched_inputs[0]
                 proposals = [x["proposals"].to(self.device) for x in batched_inputs]
-
+            
             results, _ = self.roi_heads(images, features, proposals, None)
         else:
             detected_instances = [x.to(self.device) for x in detected_instances]
             results = self.roi_heads.forward_with_given_boxes(features, detected_instances)
-
+        
         if do_postprocess:
             return OneStageRCNN._postprocess(results, batched_inputs, images.image_sizes)
         else:
             return results
-
+    
     @staticmethod
     def _postprocess(instances, batched_inputs, image_sizes):
         """
@@ -179,10 +181,13 @@ class OneStageRCNN(GeneralizedRCNN):
         # note: private function; subject to changes
         processed_results = []
         for results_per_image, input_per_image, image_size in zip(
-            instances, batched_inputs, image_sizes
+                instances, batched_inputs, image_sizes
         ):
             height = input_per_image.get("height", image_size[0])
             width = input_per_image.get("width", image_size[1])
             r = detector_postprocess(results_per_image, height, width)
             processed_results.append({"instances": r})
         return processed_results
+
+
+
