@@ -521,7 +521,7 @@ class FCOS_CIOU_Outputs(nn.Module):
             "mask_centers_targets": mask_centers,
         }
     
-    def losses(self, logits_pred, reg_pred, ctrness_pred, locations, gt_instances, ctrness_targets):
+    def losses(self, logits_pred, reg_pred, ctrness_pred, locations, gt_instances):
         """
         Return the losses from a set of FCOS predictions and their associated ground-truth.
 
