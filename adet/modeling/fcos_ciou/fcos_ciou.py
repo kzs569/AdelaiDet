@@ -25,6 +25,7 @@ from fvcore.nn import sigmoid_focal_loss_jit
 from adet.layers import ml_nms
 from adet.layers.iou_loss import CenterIOULoss
 
+__all__ = ["FCOS_CIOU_Network", "FCOS_CIOU", "FCOS_CIOU_Head", "FCOS_CIOU_Outputs"]
 
 @META_ARCH_REGISTRY.register()
 class FCOS_CIOU_Network(nn.Module):
