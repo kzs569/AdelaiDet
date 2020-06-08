@@ -8,7 +8,7 @@ MODEL:
   FPN:
     IN_FEATURES: ["res3", "res4", "res5"]
   PROPOSAL_GENERATOR:
-    NAME: "FCOS"
+    NAME: "FCOS_CIOU"
   FCOS:
     LOC_LOSS_TYPE: "c_iou"
   PIXEL_MEAN: [102.9801, 115.9465, 122.7717]
