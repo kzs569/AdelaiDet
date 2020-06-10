@@ -58,14 +58,6 @@ class FCOS_CIOU_Network(nn.Module):
         images = ImageList.from_tensors(images, self.backbone.size_divisibility)
         features = self.backbone(images.tensor)
         
-        if "sem_seg" in batched_inputs[0]:
-            gt_sem = [x["sem_seg"].to(self.device) for x in batched_inputs]
-            gt_sem = ImageList.from_tensors(
-                gt_sem, self.backbone.size_divisibility, self.panoptic_module.ignore_value
-            ).tensor
-        else:
-            gt_sem = None
-        
         if "instances" in batched_inputs[0]:
             gt_instances = [x["instances"].to(self.device) for x in batched_inputs]
         elif "targets" in batched_inputs[0]:
@@ -90,6 +82,10 @@ class FCOS_CIOU_Network(nn.Module):
             width = input_per_image.get("width", image_size[1])
             r = detector_postprocess(results_per_image, height, width)
             processed_results.append({"proposals": r})
+            
+        if self.training:
+            return processed_results
+        processed_results = [{"instances": r["proposals"]} for r in processed_results]
         return processed_results
 
 
