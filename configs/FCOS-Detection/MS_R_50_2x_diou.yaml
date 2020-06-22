@@ -9,4 +9,4 @@ MODEL:
 SOLVER:
   STEPS: (120000, 160000)
   MAX_ITER: 180000
-OUTPUT_DIR: "output/fcos/R_50_2x_giou"
+OUTPUT_DIR: "output/fcos/R_50_2x_diou"
