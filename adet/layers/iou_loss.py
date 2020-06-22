@@ -53,11 +53,11 @@ class IOULoss(nn.Module):
         area_intersect = w_intersect * h_intersect
         area_union = target_aera + pred_aera - area_intersect
         
-        pred_center_x = torch.mean(pred_left, pred_right)
-        pred_center_y = torch.mean(pred_top, pred_bottom)
+        pred_center_x = pred_left + pred_right // 2
+        pred_center_y = pred_top + pred_bottom // 2
     
-        target_center_x = torch.mean(target_left, target_right)
-        target_center_y = torch.mean(target_top, target_bottom)
+        target_center_x = target_left + target_right // 2
+        target_center_y = target_top + target_bottom // 2
         
         dis_center = (pred_center_x - target_center_x) ** 2 + (pred_center_y - target_center_y) ** 2
         diag = g_w_intersect ** 2 + g_h_intersect ** 2
