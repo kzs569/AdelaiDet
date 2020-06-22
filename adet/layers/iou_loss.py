@@ -53,8 +53,17 @@ class IOULoss(nn.Module):
         area_intersect = w_intersect * h_intersect
         area_union = target_aera + pred_aera - area_intersect
         
+        pred_center_x, pred_center_y = torch.mean(pred_left, pred_right), torch.mean(pred_top, pred_bottom)
+        target_center_x, target_center_y = torch.mean(target_left, target_right), torch.mean(target_top, target_bottom)
+        
+        dis_center = (pred_center_x - target_center_x) ** 2 + (pred_center_y - target_center_y) ** 2
+        diag = g_w_intersect**2 + g_h_intersect**2
+        
+        
         ious = (area_intersect + 1.0) / (area_union + 1.0)
         gious = ious - (ac_uion - area_union) / ac_uion
+        
+        dious = ious - dis_center/diag
         
         if self.loc_loss_type == 'iou':
             losses = -torch.log(ious)
@@ -62,6 +71,8 @@ class IOULoss(nn.Module):
             losses = 1 - ious
         elif self.loc_loss_type == 'giou':
             losses = 1 - gious
+        elif self.loc_loss_type == 'diou':
+            losses = 1 - dious
         else:
             raise NotImplementedError
         
