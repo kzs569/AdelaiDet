@@ -39,12 +39,12 @@ class Blender(object):
             canonical_level=2
         )
     
-    def __call__(self, bases, proposals, gt_instances):
+    def __call__(self, basis_out, proposals, gt_instances):
         if gt_instances is not None:
             # training
             # reshape attns
-            bases = bases["bases"]
-            bases_p5 = bases["bases_p5"]
+            bases = basis_out["bases"]
+            bases_p5 = basis_out["bases_p5"]
             
             extras = proposals["extras"]
             attns = proposals["top_feats"]
@@ -64,7 +64,7 @@ class Blender(object):
             rois = self.pooler(bases, [x.gt_boxes for x in gt_instances])
             rois = rois[gt_inds]
             
-            rois_p5 = self.pooler_p5(bases, [x.gt_boxes for x in gt_instances])
+            rois_p5 = self.pooler_p5(bases_p5, [x.gt_boxes for x in gt_instances])
             rois_p5 = rois_p5[gt_inds]
             
             pred_mask_logits = self.merge_bases(rois, rois_p5, attns)
@@ -91,6 +91,8 @@ class Blender(object):
                          / loss_denorm)
             return None, {"loss_mask": mask_loss}
         else:
+            bases = basis_out["bases"]
+            bases_p5 = basis_out["bases_p5"]
             # no proposals
             total_instances = sum([len(x) for x in proposals])
             if total_instances == 0:
@@ -101,7 +103,7 @@ class Blender(object):
                 return proposals, {}
             # 需要同时修改
             rois = self.pooler(bases, [x.pred_boxes for x in proposals])
-            rois_p5 = self.pooler_p5(bases, [x.gt_boxes for x in proposals])
+            rois_p5 = self.pooler_p5(bases_p5, [x.gt_boxes for x in proposals])
             attns = cat([x.top_feat for x in proposals], dim=0)
             pred_mask_logits = self.merge_bases(rois, rois_p5, attns).sigmoid()
             pred_mask_logits = pred_mask_logits.view(
