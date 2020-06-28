@@ -123,7 +123,7 @@ class Blender(object):
         
         coeffs = coeffs.view(N, -1, self.attn_size, self.attn_size)
         
-        masks_preds_p5 = (rois_p5 * coeffs.softmax(dim=1)).sum(dim=1)
+        masks_preds_p5 = (rois_p5 * coeffs.softmax(dim=1)).sum(dim=1).unsqueeze(1)
         masks_preds_p5 = F.interpolate(masks_preds_p5, (H, W), mode=self.top_interp)
         
         coeffs = F.interpolate(coeffs, (H, W),
