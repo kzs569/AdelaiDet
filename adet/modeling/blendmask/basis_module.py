@@ -87,7 +87,21 @@ class ProtoNet(nn.Module):
                 x_p = F.interpolate(x_p, x.size()[2:], mode="bilinear", align_corners=False)
                 # x_p = aligned_bilinear(x_p, x.size(3) // x_p.size(3))
                 x = x + x_p
+
         outputs = {"bases": [self.tower(x)]}
+        
+        for i, f in enumerate(self.in_features[::-1]):
+            index = len(self.in_features) - 1 - i
+            if i == 0:
+                x = self.refine[index](features[f])
+            else:
+                x_p = self.refine[index](features[f])
+                x_p = F.interpolate(x_p, x.size()[2:], mode="bilinear", align_corners=False)
+                # x_p = aligned_bilinear(x_p, x.size(3) // x_p.size(3))
+                x = x + x_p
+                
+        outputs["bases_p5"] = [self.tower(x)]
+        
         losses = {}
         # auxiliary thing semantic loss
         if self.training and self.loss_on:

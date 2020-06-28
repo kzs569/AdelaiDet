@@ -113,7 +113,7 @@ class BlendMask(nn.Module):
         proposals, proposal_losses = self.proposal_generator(
             images, features, gt_instances, self.top_layer)
         detector_results, detector_losses = self.blender(
-            basis_out["bases"], proposals, gt_instances)
+            basis_out, proposals, gt_instances)
 
         if self.training:
             losses = {}

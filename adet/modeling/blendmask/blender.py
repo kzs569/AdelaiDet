@@ -11,49 +11,64 @@ def build_blender(cfg):
 
 class Blender(object):
     def __init__(self, cfg):
-
+        
         # fmt: off
         self.pooler_resolution = cfg.MODEL.BLENDMASK.BOTTOM_RESOLUTION
-        sampling_ratio         = cfg.MODEL.BLENDMASK.POOLER_SAMPLING_RATIO
-        pooler_type            = cfg.MODEL.BLENDMASK.POOLER_TYPE
-        pooler_scales          = cfg.MODEL.BLENDMASK.POOLER_SCALES
-        self.attn_size         = cfg.MODEL.BLENDMASK.ATTN_SIZE
-        self.top_interp        = cfg.MODEL.BLENDMASK.TOP_INTERP
-        num_bases              = cfg.MODEL.BASIS_MODULE.NUM_BASES
+        sampling_ratio = cfg.MODEL.BLENDMASK.POOLER_SAMPLING_RATIO
+        pooler_type = cfg.MODEL.BLENDMASK.POOLER_TYPE
+        pooler_scales = cfg.MODEL.BLENDMASK.POOLER_SCALES
+        self.attn_size = cfg.MODEL.BLENDMASK.ATTN_SIZE
+        self.top_interp = cfg.MODEL.BLENDMASK.TOP_INTERP
+        num_bases = cfg.MODEL.BASIS_MODULE.NUM_BASES
         # fmt: on
-
+        
         self.attn_len = num_bases * self.attn_size * self.attn_size
-
+        
         self.pooler = ROIPooler(
             output_size=self.pooler_resolution,
             scales=pooler_scales,
             sampling_ratio=sampling_ratio,
             pooler_type=pooler_type,
             canonical_level=2)
-
+        
+        self.pooler_p5 = ROIPooler(
+            output_size=self.pooler_resolution // 4,
+            scales=pooler_scales,
+            sampling_ratio=sampling_ratio,
+            pooler_type=pooler_type,
+            canonical_level=2
+        )
+    
     def __call__(self, bases, proposals, gt_instances):
         if gt_instances is not None:
             # training
             # reshape attns
+            bases = bases["bases"]
+            bases_p5 = bases["bases_p5"]
+            
             extras = proposals["extras"]
             attns = proposals["top_feats"]
             pos_inds = extras["pos_inds"]
             if pos_inds.numel() == 0:
                 return None, {"loss_mask": sum([x.sum() * 0 for x in attns]) + bases[0].sum() * 0}
-
+            
             gt_inds = extras["gt_inds"]
             attns = cat(
                 [
                     # Reshape: (N, C, Hi, Wi) -> (N, Hi, Wi, C) -> (N*Hi*Wi, C)
                     x.permute(0, 2, 3, 1).reshape(-1, self.attn_len)
                     for x in attns
-                ], dim=0,)
+                ], dim=0, )
             attns = attns[pos_inds]
-
+            
             rois = self.pooler(bases, [x.gt_boxes for x in gt_instances])
             rois = rois[gt_inds]
-            pred_mask_logits = self.merge_bases(rois, attns)
-
+            
+            rois_p5 = self.pooler_p5(bases, [x.gt_boxes for x in gt_instances])
+            rois_p5 = rois_p5[gt_inds]
+            
+            pred_mask_logits = self.merge_bases(rois, rois_p5, attns)
+            
             # gen targets
             gt_masks = []
             for instances_per_image in gt_instances:
@@ -67,7 +82,7 @@ class Blender(object):
             gt_masks = gt_masks[gt_inds]
             N = gt_masks.size(0)
             gt_masks = gt_masks.view(N, -1)
-
+            
             gt_ctr = extras["gt_ctr"]
             loss_denorm = extras["loss_denorm"]
             mask_losses = F.binary_cross_entropy_with_logits(
@@ -84,9 +99,11 @@ class Blender(object):
                     box.pred_masks = box.pred_classes.view(
                         -1, 1, self.pooler_resolution, self.pooler_resolution)
                 return proposals, {}
+            # 需要同时修改
             rois = self.pooler(bases, [x.pred_boxes for x in proposals])
+            rois_p5 = self.pooler_p5(bases, [x.gt_boxes for x in proposals])
             attns = cat([x.top_feat for x in proposals], dim=0)
-            pred_mask_logits = self.merge_bases(rois, attns).sigmoid()
+            pred_mask_logits = self.merge_bases(rois, rois_p5, attns).sigmoid()
             pred_mask_logits = pred_mask_logits.view(
                 -1, 1, self.pooler_resolution, self.pooler_resolution)
             start_ind = 0
@@ -95,16 +112,19 @@ class Blender(object):
                 box.pred_masks = pred_mask_logits[start_ind:end_ind]
                 start_ind = end_ind
             return proposals, {}
-
-    def merge_bases(self, rois, coeffs, location_to_inds=None):
+    
+    def merge_bases(self, rois, rois_p5, coeffs, location_to_inds=None):
         # merge predictions
-        N = coeffs.size(0)
         if location_to_inds is not None:
             rois = rois[location_to_inds]
         N, B, H, W = rois.size()
-
+        
         coeffs = coeffs.view(N, -1, self.attn_size, self.attn_size)
+        
+        masks_preds_p5 = (rois_p5 * coeffs.softmax(dim=1)).sum(dim=1)
+        masks_preds_p5 = F.interpolate(masks_preds_p5, (H, W), mode=self.top_interp)
+        
         coeffs = F.interpolate(coeffs, (H, W),
                                mode=self.top_interp).softmax(dim=1)
-        masks_preds = (rois * coeffs).sum(dim=1)
+        masks_preds = masks_preds_p5 + (rois * coeffs).sum(dim=1)
         return masks_preds.view(N, -1)
