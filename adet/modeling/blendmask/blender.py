@@ -103,7 +103,7 @@ class Blender(object):
                 return proposals, {}
             # 需要同时修改
             rois = self.pooler(bases, [x.pred_boxes for x in proposals])
-            rois_p5 = self.pooler_p5(bases_p5, [x.gt_boxes for x in proposals])
+            rois_p5 = self.pooler_p5(bases_p5, [x.pred_boxes for x in proposals])
             attns = cat([x.top_feat for x in proposals], dim=0)
             pred_mask_logits = self.merge_bases(rois, rois_p5, attns).sigmoid()
             pred_mask_logits = pred_mask_logits.view(
