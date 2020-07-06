@@ -140,6 +140,6 @@ class Blender(object):
         coeffs = F.interpolate(coeffs, (H, W),
                                mode=self.top_interp).softmax(dim=1)
         
-        # masks_preds = masks_preds_p5.sum(dim=1) + (rois * coeffs).sum(dim=1)
-        masks_preds = (rois * coeffs).sum(dim=1)
+        masks_preds = masks_preds_p5.sum(dim=1) + (rois * coeffs).sum(dim=1)
+        # masks_preds = (rois * coeffs).sum(dim=1)
         return masks_preds.view(N, -1)
