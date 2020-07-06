@@ -102,7 +102,7 @@ _C.MODEL.BLENDMASK.POOLER_TYPE = "ROIAlignV2"
 _C.MODEL.BLENDMASK.POOLER_SAMPLING_RATIO = 1
 _C.MODEL.BLENDMASK.POOLER_SCALES = (0.25,)
 _C.MODEL.BLENDMASK.INSTANCE_LOSS_WEIGHT = 1.0
-_C.MODEL.BLENDMASK.VISUALIZE = False
+_C.MODEL.BLENDMASK.VISUALIZE = True
 
 # ---------------------------------------------------------------------------- #
 # Basis Module Options
