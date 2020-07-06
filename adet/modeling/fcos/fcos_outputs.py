@@ -370,7 +370,7 @@ class FCOSOutputs(nn.Module):
             "loss_fcos_ctr": ctrness_loss
         }
         extras = {
-            "instances": instances,
+            "instances": F,
             "loss_denorm": loss_denorm
         }
         return extras, losses
